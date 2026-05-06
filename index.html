@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GO Mini Mart</title>
 <style>
 body{margin:0;font-family:Arial;background:#f4f8f2}
@@ -51,7 +52,24 @@ input,textarea{width:100%;box-sizing:border-box;padding:10px;margin:7px 0;border
   </aside>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAxV1X_B1tizqiwPtyIB-djVuluMspJIdc",
+  authDomain: "taphoa-9b46c.firebaseapp.com",
+  databaseURL: "https://taphoa-9b46c-default-rtdb.firebaseio.com",
+  projectId: "taphoa-9b46c",
+  storageBucket: "taphoa-9b46c.firebasestorage.app",
+  messagingSenderId: "877038942781",
+  appId: "1:877038942781:web:0ff77efaa5b10c2b1b4854",
+  measurementId: "G-H0HDHPYWX7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
 const products = [
   {id:1,name:"Rau cải ngọt",price:18000,img:"https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=500&q=80"},
   {id:2,name:"Thịt ba chỉ",price:125000,img:"https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=500&q=80"},
@@ -123,10 +141,7 @@ function order(){
     return;
   }
 
-  const orders = JSON.parse(localStorage.getItem("orders") || "[]");
-
   const newOrder = {
-    id: Date.now(),
     name,
     phone,
     address,
@@ -136,18 +151,25 @@ function order(){
     time: new Date().toLocaleString("vi-VN")
   };
 
-  orders.unshift(newOrder);
-  localStorage.setItem("orders", JSON.stringify(orders));
+  push(ref(db, "orders"), newOrder)
+    .then(() => {
+      alert("Đặt hàng thành công! Đơn đã chuyển sang trang quản lý.");
 
-  alert("Đặt hàng thành công! Đơn đã chuyển sang trang quản lý.");
+      cart = [];
+      renderCart();
 
-  cart = [];
-  renderCart();
-
-  document.getElementById("name").value = "";
-  document.getElementById("phone").value = "";
-  document.getElementById("address").value = "";
+      document.getElementById("name").value = "";
+      document.getElementById("phone").value = "";
+      document.getElementById("address").value = "";
+    })
+    .catch((error) => {
+      alert("Lỗi gửi đơn: " + error.message);
+    });
 }
+
+window.addCart = addCart;
+window.removeCart = removeCart;
+window.order = order;
 
 renderProducts();
 renderCart();

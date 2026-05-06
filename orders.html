@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thông tin đơn hàng</title>
 <style>
 body{margin:0;font-family:Arial;background:#f4f8f2}
@@ -39,11 +40,28 @@ input{padding:12px;border:1px solid #ddd;border-radius:10px;width:250px}
   </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAxV1X_B1tizqiwPtyIB-djVuluMspJIdc",
+  authDomain: "taphoa-9b46c.firebaseapp.com",
+  databaseURL: "https://taphoa-9b46c-default-rtdb.firebaseio.com",
+  projectId: "taphoa-9b46c",
+  storageBucket: "taphoa-9b46c.firebasestorage.app",
+  messagingSenderId: "877038942781",
+  appId: "1:877038942781:web:0ff77efaa5b10c2b1b4854",
+  measurementId: "G-H0HDHPYWX7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
 const ADMIN_PASSWORD = "123456";
 
 function money(n){
-  return n.toLocaleString("vi-VN") + "đ";
+  return Number(n || 0).toLocaleString("vi-VN") + "đ";
 }
 
 function login(){
@@ -70,63 +88,60 @@ function showAdmin(){
 }
 
 function renderOrders(){
-  const orders = JSON.parse(localStorage.getItem("orders") || "[]");
   const box = document.getElementById("orders");
 
-  if(orders.length === 0){
-    box.innerHTML = "<p>Chưa có đơn hàng nào.</p>";
-    return;
-  }
+  onValue(ref(db, "orders"), snapshot => {
+    const data = snapshot.val();
 
-  box.innerHTML = orders.map(o => `
-    <div class="order">
-      <h3>Đơn #${o.id}</h3>
-      <span class="badge">${o.status}</span>
-      <p><b>Khách hàng:</b> ${o.name}</p>
-      <p><b>Số điện thoại:</b> ${o.phone}</p>
-      <p><b>Địa chỉ:</b> ${o.address}</p>
-      <p><b>Thời gian:</b> ${o.time}</p>
+    if(!data){
+      box.innerHTML = "<p>Chưa có đơn hàng nào.</p>";
+      return;
+    }
 
-      <h4>Sản phẩm:</h4>
-      ${o.cart.map(i => `
-        <div class="item">
-          ${i.name} x ${i.qty} - ${money(i.price * i.qty)}
-        </div>
-      `).join("")}
+    const orders = Object.entries(data).reverse();
 
-      <p class="total">Tổng tiền: ${money(o.total)}</p>
+    box.innerHTML = orders.map(([id, o]) => `
+      <div class="order">
+        <h3>Đơn #${id}</h3>
+        <span class="badge">${o.status || "Đơn mới"}</span>
 
-      <button class="green" onclick="updateStatus(${o.id}, 'Đang xử lý')">Đang xử lý</button>
-      <button class="green" onclick="updateStatus(${o.id}, 'Đã giao')">Đã giao</button>
-      <button class="red" onclick="deleteOrder(${o.id})">Xóa đơn</button>
-    </div>
-  `).join("");
+        <p><b>Khách hàng:</b> ${o.name || ""}</p>
+        <p><b>Số điện thoại:</b> ${o.phone || ""}</p>
+        <p><b>Địa chỉ:</b> ${o.address || ""}</p>
+        <p><b>Thời gian:</b> ${o.time || ""}</p>
+
+        <h4>Sản phẩm:</h4>
+        ${(o.cart || []).map(i => `
+          <div class="item">
+            ${i.name} x ${i.qty} - ${money(i.price * i.qty)}
+          </div>
+        `).join("")}
+
+        <p class="total">Tổng tiền: ${money(o.total)}</p>
+
+        <button class="green" onclick="updateStatus('${id}', 'Đang xử lý')">Đang xử lý</button>
+        <button class="green" onclick="updateStatus('${id}', 'Đã giao')">Đã giao</button>
+        <button class="red" onclick="deleteOrder('${id}')">Xóa đơn</button>
+      </div>
+    `).join("");
+  });
 }
 
 function updateStatus(id, status){
-  const orders = JSON.parse(localStorage.getItem("orders") || "[]");
-  const order = orders.find(o => o.id === id);
-
-  if(order){
-    order.status = status;
-    localStorage.setItem("orders", JSON.stringify(orders));
-    renderOrders();
-  }
+  update(ref(db, "orders/" + id), {
+    status: status
+  });
 }
 
 function deleteOrder(id){
   if(confirm("Bạn muốn xóa đơn này?")){
-    let orders = JSON.parse(localStorage.getItem("orders") || "[]");
-    orders = orders.filter(o => o.id !== id);
-    localStorage.setItem("orders", JSON.stringify(orders));
-    renderOrders();
+    remove(ref(db, "orders/" + id));
   }
 }
 
 function clearOrders(){
   if(confirm("Xóa tất cả đơn hàng?")){
-    localStorage.removeItem("orders");
-    renderOrders();
+    remove(ref(db, "orders"));
   }
 }
 
@@ -134,12 +149,11 @@ if(sessionStorage.getItem("adminLogin") === "true"){
   showAdmin();
 }
 
-// Tự cập nhật đơn mới mỗi 2 giây
-setInterval(() => {
-  if(sessionStorage.getItem("adminLogin") === "true"){
-    renderOrders();
-  }
-}, 2000);
+window.login = login;
+window.logout = logout;
+window.clearOrders = clearOrders;
+window.updateStatus = updateStatus;
+window.deleteOrder = deleteOrder;
 </script>
 
 </body>
