@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý sản phẩm</title>
+<style>
+body{margin:0;font-family:Arial;background:#f4f8f2}
+header{background:#00843d;color:white;padding:15px 40px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+button{border:0;padding:10px 16px;border-radius:20px;font-weight:bold;cursor:pointer;margin:4px}
+.green{background:#00843d;color:white}.yellow{background:#ffd43b}.red{background:#dc2626;color:white}.gray{background:#e5e7eb}
+.container{margin:30px 40px}
+.login,.box,.productCard{background:white;border-radius:18px;padding:20px;margin-bottom:15px;box-shadow:0 5px 20px #0001}
+input{padding:12px;border:1px solid #ddd;border-radius:10px;width:100%;box-sizing:border-box;margin:7px 0}
+.productGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.productCard img{width:100%;height:160px;object-fit:cover;border-radius:12px;background:#eee}
+.price{color:#dc2626;font-size:20px;font-weight:bold}
+.preview{width:140px;height:140px;object-fit:cover;border-radius:12px;display:none;margin-top:10px;border:2px solid #ddd}
+@media(max-width:800px){.container{margin:15px}.productGrid{grid-template-columns:1fr}header{padding:15px}}
+</style>
+</head>
+<body>
+
+<header>
+  <h2>🛒 Quản lý sản phẩm</h2>
+  <div>
+    <button class="yellow" onclick="location.href='orders.html'">Trang đơn hàng</button>
+    <button class="yellow" onclick="location.href='index.html'">Trang bán hàng</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="login" id="loginBox">
+    <h2>Đăng nhập admin</h2>
+    <input type="password" id="password" placeholder="Nhập mật khẩu">
+    <button class="green" onclick="login()">Đăng nhập</button>
+    <p>Mật khẩu mẫu: <b>123456</b></p>
+  </div>
+
+  <div id="adminBox" style="display:none">
+    <button class="red" onclick="logout()">Đăng xuất</button>
+
+    <div class="box">
+      <h2 id="productFormTitle">Thêm sản phẩm mới</h2>
+      <input id="productName" placeholder="Tên sản phẩm">
+      <input id="productPrice" type="number" placeholder="Giá sản phẩm">
+      <input id="productImg" placeholder="Link ảnh sản phẩm nếu không muốn tải ảnh">
+      <input id="productFile" type="file" accept="image/*">
+      <img id="previewImg" class="preview">
+
+      <br>
+      <button class="green" onclick="saveProduct()">Lưu sản phẩm</button>
+      <button class="gray" onclick="resetProductForm()">Làm mới</button>
+    </div>
+
+    <h2>Danh sách sản phẩm</h2>
+    <div class="productGrid" id="productList"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getDatabase, ref, onValue, push, set, remove } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAxV1X_B1tizqiwPtyIB-djVuluMspJIdc",
+  authDomain: "taphoa-9b46c.firebaseapp.com",
+  databaseURL: "https://taphoa-9b46c-default-rtdb.firebaseio.com",
+  projectId: "taphoa-9b46c",
+  storageBucket: "taphoa-9b46c.firebasestorage.app",
+  messagingSenderId: "877038942781",
+  appId: "1:877038942781:web:0ff77efaa5b10c2b1b4854",
+  measurementId: "G-H0HDHPYWX7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const ADMIN_PASSWORD = "123456";
+let editingProductId = null;
+let selectedImageBase64 = "";
+
+function money(n){
+  return Number(n || 0).toLocaleString("vi-VN") + "đ";
+}
+
+function login(){
+  const pass = document.getElementById("password").value;
+
+  if(pass === ADMIN_PASSWORD){
+    sessionStorage.setItem("productAdminLogin","true");
+    showAdmin();
+  }else{
+    alert("Sai mật khẩu.");
+  }
+}
+
+function logout(){
+  sessionStorage.removeItem("productAdminLogin");
+  document.getElementById("loginBox").style.display = "block";
+  document.getElementById("adminBox").style.display = "none";
+}
+
+function showAdmin(){
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("adminBox").style.display = "block";
+  setupImageUpload();
+  renderProducts();
+}
+
+function setupImageUpload(){
+  const fileInput = document.getElementById("productFile");
+
+  fileInput.onchange = function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(event){
+      selectedImageBase64 = event.target.result;
+      const preview = document.getElementById("previewImg");
+      preview.src = selectedImageBase64;
+      preview.style.display = "block";
+    };
+
+    reader.readAsDataURL(file);
+  };
+}
+
+function renderProducts(){
+  const box = document.getElementById("productList");
+
+  onValue(ref(db, "products"), snapshot => {
+    const data = snapshot.val();
+
+    if(!data){
+      box.innerHTML = "<p>Chưa có sản phẩm nào.</p>";
+      return;
+    }
+
+    const products = Object.entries(data);
+
+    box.innerHTML = products.map(([id, p]) => `
+      <div class="productCard">
+        <img src="${p.img || ""}" onerror="this.src='https://via.placeholder.com/500x300?text=San+pham'">
+        <h3>${p.name || ""}</h3>
+        <p class="price">${money(p.price || 0)}</p>
+        <button class="yellow" onclick="editProduct('${id}')">Sửa</button>
+        <button class="red" onclick="deleteProduct('${id}')">Xóa</button>
+      </div>
+    `).join("");
+  });
+}
+
+function saveProduct(){
+  const name = document.getElementById("productName").value.trim();
+  const price = Number(document.getElementById("productPrice").value);
+  const linkImg = document.getElementById("productImg").value.trim();
+  const finalImg = selectedImageBase64 || linkImg;
+
+  if(!name || !price || !finalImg){
+    alert("Vui lòng nhập tên, giá và chọn ảnh sản phẩm.");
+    return;
+  }
+
+  const product = { name, price, img: finalImg };
+
+  if(editingProductId){
+    set(ref(db, "products/" + editingProductId), product);
+    alert("Đã cập nhật sản phẩm.");
+  }else{
+    push(ref(db, "products"), product);
+    alert("Đã thêm sản phẩm mới.");
+  }
+
+  resetProductForm();
+}
+
+function editProduct(id){
+  onValue(ref(db, "products/" + id), snapshot => {
+    const p = snapshot.val();
+    if(!p) return;
+
+    editingProductId = id;
+    selectedImageBase64 = p.img || "";
+
+    document.getElementById("productFormTitle").innerText = "Sửa sản phẩm";
+    document.getElementById("productName").value = p.name || "";
+    document.getElementById("productPrice").value = p.price || "";
+    document.getElementById("productImg").value = "";
+
+    const preview = document.getElementById("previewImg");
+    if(selectedImageBase64){
+      preview.src = selectedImageBase64;
+      preview.style.display = "block";
+    }else{
+      preview.style.display = "none";
+    }
+
+    window.scrollTo({top:0, behavior:"smooth"});
+  }, {onlyOnce:true});
+}
+
+function deleteProduct(id){
+  if(confirm("Bạn muốn xóa sản phẩm này?")){
+    remove(ref(db, "products/" + id));
+  }
+}
+
+function resetProductForm(){
+  editingProductId = null;
+  selectedImageBase64 = "";
+  document.getElementById("productFormTitle").innerText = "Thêm sản phẩm mới";
+  document.getElementById("productName").value = "";
+  document.getElementById("productPrice").value = "";
+  document.getElementById("productImg").value = "";
+  document.getElementById("productFile").value = "";
+
+  const preview = document.getElementById("previewImg");
+  preview.src = "";
+  preview.style.display = "none";
+}
+
+if(sessionStorage.getItem("productAdminLogin") === "true"){
+  showAdmin();
+}
+
+window.login = login;
+window.logout = logout;
+window.saveProduct = saveProduct;
+window.editProduct = editProduct;
+window.deleteProduct = deleteProduct;
+window.resetProductForm = resetProductForm;
+</script>
+
+</body>
+</html>

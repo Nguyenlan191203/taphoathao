@@ -25,7 +25,7 @@ input,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;
 .radio{width:24px;height:24px;border:3px solid #00843d;border-radius:50%;display:inline-block;position:relative}
 .radio:after{content:"";position:absolute;inset:4px;background:#00843d;border-radius:50%}
 .disabled{color:#aaa}
-.warning{background:#ecfdf5;color:#00843d;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin-left:42px}
+
 .days,.times{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .times{grid-template-columns:repeat(2,1fr)}
 .choice{background:white;border:1px solid #ddd;border-radius:10px;padding:13px;text-align:center;font-size:18px;cursor:pointer}
@@ -34,7 +34,7 @@ input,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;
 .item{display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:center;margin-top:10px}
 .item img{width:65px;height:55px;object-fit:cover;border-radius:8px}
 .totalLine{display:flex;justify-content:space-between;font-weight:bold;font-size:20px;border-top:1px solid #eee;padding-top:15px;margin-top:15px}
-.payOption{display:flex;align-items:center;gap:12px;font-size:20px;margin:16px 0}
+
 .bottom{position:fixed;bottom:0;left:0;right:0;background:white;padding:14px 18px;display:grid;grid-template-columns:1fr 1.4fr;gap:14px;align-items:center;box-shadow:0 -3px 10px #0002;z-index:20}
 .totalPay{font-size:15px;font-weight:bold}
 .totalPay span{display:block;color:#dc2626;font-size:28px;margin-top:4px}
@@ -51,8 +51,8 @@ input,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;
 </div>
 
 <div class="section">
-  <div class="store">🛍️ GO! MINI MART</div>
-  <div class="muted">Siêu thị online - giao hàng tận nơi</div>
+  <div class="store">🛍️ TẠP HÓA THẢO</div>
+  <div class="muted">Mua hàng online - giao hàng tận nơi</div>
 </div>
 
 <div class="section">
@@ -73,13 +73,6 @@ input,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;
 </div>
 
 <div class="section">
-  <h2 class="title">Chọn đơn vị giao hàng</h2>
-  <div class="radioLine"><span class="radio"></span> Giao theo khung giờ</div>
-  <div class="radioLine disabled"><span style="width:24px;height:24px;border:3px solid #aaa;border-radius:50%;display:inline-block"></span> Giao nhanh 1 giờ</div>
-  <div class="warning">Đơn hàng giao theo khung giờ từ 09:00 đến 20:00.</div>
-</div>
-
-<div class="section">
   <h2 class="title">Chọn giờ nhận hàng</h2>
   <h3>Ngày</h3>
   <div class="days" id="dayChoices"></div>
@@ -90,8 +83,8 @@ input,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;
 <div class="section">
   <div class="infoCard">
     <b>Điều kiện giao hàng miễn phí</b><br>
-    📍 Phạm vi giao hàng trong bán kính 10.0km ✅<br>
-    🧾 Đơn hàng từ 300,000đ trở lên <span id="freeShipCheck"></span>
+    📍 Phạm vi giao hàng trong bán kính 5.0km ✅<br>
+    🧾 Đơn hàng từ 200,000đ trở lên <span id="freeShipCheck"></span>
   </div>
   <br>
   <div class="infoCard">
@@ -108,13 +101,6 @@ input,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;
     <span>Tổng tiền sản phẩm:</span>
     <span class="red" id="productTotal">0đ</span>
   </div>
-</div>
-
-<div class="section">
-  <h2 class="title">Chọn phương thức thanh toán</h2>
-  <div class="payOption"><span class="radio"></span> 💵 <b>Thanh toán tiền mặt - COD</b></div>
-  <div class="payOption disabled"><span style="width:24px;height:24px;border:3px solid #aaa;border-radius:50%;display:inline-block;border-radius:50%"></span> Thanh toán bằng VNPAY - QR</div>
-  <div class="payOption disabled"><span style="width:24px;height:24px;border:3px solid #aaa;border-radius:50%;display:inline-block;border-radius:50%"></span> ZaloPay</div>
 </div>
 
 <div class="bottom">
@@ -146,7 +132,7 @@ const db = getDatabase(app);
 let cart = JSON.parse(localStorage.getItem("cart") || "[]");
 let selectedDay = "";
 let selectedTime = "";
-const shipFee = 25000;
+const shipFee = 20000;
 
 function money(n){ return Number(n || 0).toLocaleString("vi-VN") + "đ"; }
 
@@ -251,15 +237,15 @@ function renderCart(){
   }
 
   const productTotal = cart.reduce((sum,i)=>sum+i.price*i.qty,0);
-  const realShipFee = productTotal >= 300000 ? 0 : shipFee;
+  const realShipFee = productTotal >= 200000 ? 0 : shipFee;
   const grandTotal = productTotal + realShipFee;
 
   document.getElementById("productCount").innerText = cart.reduce((sum,i)=>sum+i.qty,0);
   document.getElementById("productTotal").innerText = money(productTotal);
   document.getElementById("shipFeeText").innerText = money(realShipFee);
   document.getElementById("grandTotal").innerText = money(grandTotal);
-  document.getElementById("freeShipCheck").innerText = productTotal >= 300000 ? "✅" : "❌";
-  document.getElementById("shipNote").innerText = productTotal >= 300000 ? "Đơn hàng đủ điều kiện miễn phí giao hàng" : "Chưa đủ điều kiện miễn phí giao hàng";
+  document.getElementById("freeShipCheck").innerText = productTotal >= 200000 ? "✅" : "❌";
+  document.getElementById("shipNote").innerText = productTotal >= 200000 ? "Đơn hàng đủ điều kiện miễn phí giao hàng" : "Chưa đủ điều kiện miễn phí giao hàng";
 
   document.getElementById("productList").innerHTML = cart.map(i=>`
     <div class="item">
@@ -284,7 +270,7 @@ function placeOrder(){
   }
 
   const productTotal = cart.reduce((sum,i)=>sum+i.price*i.qty,0);
-  const realShipFee = productTotal >= 300000 ? 0 : shipFee;
+  const realShipFee = productTotal >= 200000 ? 0 : shipFee;
 
   const newOrder = {
     name: getCustomerInfo().name,

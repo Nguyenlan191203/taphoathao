@@ -119,10 +119,10 @@ function renderCart(){
         <p>Thành tiền: <span class="price">${money(i.price * i.qty)}</span></p>
       </div>
       <div class="itemActions">
-        <button class="yellow" onclick="decreaseQty(${i.id})">-</button>
-        <button class="yellow" onclick="increaseQty(${i.id})">+</button>
-        <button class="red" onclick="removeCart(${i.id})">Xóa</button>
-      </div>
+  <button class="yellow" onclick="decreaseQty('${i.id}')">-</button>
+  <button class="yellow" onclick="increaseQty('${i.id}')">+</button>
+  <button class="red" onclick="removeCart('${i.id}')">Xóa</button>
+</div>
     </div>
   `).join("") + `
     <br>

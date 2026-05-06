@@ -15,15 +15,43 @@ input{padding:12px;border:1px solid #ddd;border-radius:10px;width:250px;max-widt
 .badge{display:inline-block;background:#ffd43b;padding:6px 12px;border-radius:20px;font-weight:bold}
 .item{background:#f7f7f7;margin:5px 0;padding:8px;border-radius:10px}
 .total{color:#dc2626;font-size:20px;font-weight:bold}
+.productForm{background:white;border-radius:18px;padding:20px;margin-bottom:15px;box-shadow:0 5px 20px #0001}
+.productGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.productCard{background:white;border-radius:18px;padding:15px;box-shadow:0 5px 20px #0001}
+.productCard img{width:100%;height:130px;object-fit:cover;border-radius:12px;background:#eee}
+.productForm input{width:100%;box-sizing:border-box}
+@media(max-width:800px){.productGrid{grid-template-columns:1fr}}
+.bellWrap{position:relative;display:inline-block;margin-right:10px}
+.bell{font-size:30px}
+.soundBtn{background:#ffd43b;color:#111;border:0;padding:10px 16px;border-radius:20px;font-weight:bold;cursor:pointer;margin:4px}
+.bellBadge{
+position:absolute;
+top:-5px;
+right:-8px;
+background:#dc2626;
+color:white;
+border-radius:50%;
+padding:2px 7px;
+font-size:12px;
+font-weight:bold;
+display:none
+}
 </style>
 </head>
 <body>
 
 <header>
-  <h2>Trang admin đơn hàng</h2>
+  <div style="display:flex;align-items:center;gap:12px">
+<div class="bellWrap">
+<span class="bell">🔔</span>
+<span class="bellBadge" id="bellBadge">0</span>
+</div>
+<h2>Trang admin đơn hàng</h2>
+</div>
   <div>
     <button class="yellow" onclick="location.href='index.html'">Về trang bán hàng</button>
     <button class="yellow" onclick="location.href='my-orders.html'">Đơn hàng của tôi</button>
+    <button class="yellow" onclick="location.href='products-admin.html'">Quản lý sản phẩm</button>
   </div>
 </header>
 
@@ -36,6 +64,7 @@ input{padding:12px;border:1px solid #ddd;border-radius:10px;width:250px;max-widt
   </div>
 
   <div id="adminBox" style="display:none">
+    <button class="soundBtn" onclick="enableSound()">🔊 Bật âm thanh thông báo</button>
     <button class="red" onclick="logout()">Đăng xuất</button>
     <button class="red" onclick="clearOrders()">Xóa tất cả đơn</button>
     <h2>🔔 Danh sách đơn hàng</h2>
@@ -45,7 +74,7 @@ input{padding:12px;border:1px solid #ddd;border-radius:10px;width:250px;max-widt
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+import { getDatabase, ref, onValue, update, remove, push, set } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAxV1X_B1tizqiwPtyIB-djVuluMspJIdc",
@@ -62,6 +91,58 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 const ADMIN_PASSWORD = "123456";
+let lastOrderCount = 0;
+let soundEnabled = false;
+let audioCtx = null;
+
+function enableSound(){
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    soundEnabled = true;
+    playNotification();
+    alert("Đã bật âm thanh thông báo. Khi có đơn mới, chuông sẽ kêu.");
+  }catch(e){
+    alert("Trình duyệt không cho bật âm thanh. Hãy kiểm tra âm lượng hoặc đổi trình duyệt.");
+  }
+}
+
+function playNotification(){
+  if(!soundEnabled || !audioCtx) return;
+
+  try{
+    const now = audioCtx.currentTime;
+
+    for(let i = 0; i < 3; i++){
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(900, now + i * 0.35);
+
+      gain.gain.setValueAtTime(0.001, now + i * 0.35);
+      gain.gain.exponentialRampToValueAtTime(0.35, now + i * 0.35 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.35 + 0.25);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(now + i * 0.35);
+      osc.stop(now + i * 0.35 + 0.28);
+    }
+  }catch(e){}
+}
+
+function updateBell(count){
+  const badge = document.getElementById("bellBadge");
+
+  if(count > 0){
+    badge.style.display = "block";
+    badge.innerText = count;
+  }else{
+    badge.style.display = "none";
+  }
+}
+
 
 function money(n){ return Number(n || 0).toLocaleString("vi-VN") + "đ"; }
 
@@ -84,8 +165,10 @@ function logout(){
 function showAdmin(){
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("adminBox").style.display = "block";
+  setupImageUpload();
   renderOrders();
 }
+
 
 function renderOrders(){
   const box = document.getElementById("orders");
@@ -99,6 +182,13 @@ function renderOrders(){
     }
 
     const orders = Object.entries(data).reverse();
+
+    if(lastOrderCount !== 0 && orders.length > lastOrderCount){
+      playNotification();
+    }
+
+    lastOrderCount = orders.length;
+    updateBell(orders.length);
 
     box.innerHTML = orders.map(([id, o]) => `
       <div class="order">
@@ -152,6 +242,11 @@ window.logout = logout;
 window.clearOrders = clearOrders;
 window.updateStatus = updateStatus;
 window.deleteOrder = deleteOrder;
+window.enableSound = enableSound;
+
+
+
+
 </script>
 
 </body>
