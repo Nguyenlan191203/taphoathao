@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>GO Mini Mart</title>
+<style>
+body{margin:0;font-family:Arial;background:#f4f8f2}
+header{background:#00843d;color:white;padding:15px 40px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:28px;font-weight:bold}.logo span{color:#ffd43b}
+button{border:0;padding:10px 16px;border-radius:20px;font-weight:bold;cursor:pointer}
+.yellow{background:#ffd43b}.green{background:#00843d;color:white}.red{background:#dc2626;color:white}
+.hero{margin:25px 40px;padding:35px;border-radius:25px;background:linear-gradient(120deg,#00843d,#10b981);color:white}
+.layout{display:grid;grid-template-columns:1fr 330px;gap:20px;margin:25px 40px}
+.products{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card,.cart{background:white;border-radius:18px;padding:15px;box-shadow:0 5px 20px #0001}
+.card img{width:100%;height:150px;object-fit:cover;border-radius:14px}
+.price{color:#dc2626;font-weight:bold}
+input,textarea{width:100%;box-sizing:border-box;padding:10px;margin:7px 0;border:1px solid #ddd;border-radius:10px}
+.item{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:8px 0}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.products{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">GO<span>Mini</span></div>
+  <button class="yellow" onclick="location.href='orders.html'">Trang đơn hàng</button>
+</header>
+
+<section class="hero">
+  <h1>Siêu thị online giá tốt mỗi ngày</h1>
+  <p>Đặt hàng nhanh - giao tận nơi - nhiều ưu đãi.</p>
+</section>
+
+<div class="layout">
+  <main>
+    <h2>Sản phẩm nổi bật</h2>
+    <div class="products" id="products"></div>
+  </main>
+
+  <aside class="cart">
+    <h2>Giỏ hàng</h2>
+    <div id="cartList"></div>
+    <h3>Tổng: <span id="total">0đ</span></h3>
+
+    <h3>Thông tin đặt hàng</h3>
+    <input id="name" placeholder="Tên khách hàng">
+    <input id="phone" placeholder="Số điện thoại">
+    <textarea id="address" placeholder="Địa chỉ giao hàng"></textarea>
+    <button class="green" onclick="order()">Đặt hàng</button>
+  </aside>
+</div>
+
+<script>
+const products = [
+  {id:1,name:"Rau cải ngọt",price:18000,img:"https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=500&q=80"},
+  {id:2,name:"Thịt ba chỉ",price:125000,img:"https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=500&q=80"},
+  {id:3,name:"Cá hồi phi lê",price:189000,img:"https://images.unsplash.com/photo-1599084993091-1cb5c0721cc6?auto=format&fit=crop&w=500&q=80"},
+  {id:4,name:"Sữa tươi",price:36000,img:"https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=500&q=80"},
+  {id:5,name:"Nước cam",price:22000,img:"https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=500&q=80"},
+  {id:6,name:"Gạo thơm 5kg",price:145000,img:"https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=500&q=80"}
+];
+
+let cart = [];
+
+function money(n){
+  return n.toLocaleString("vi-VN") + "đ";
+}
+
+function renderProducts(){
+  document.getElementById("products").innerHTML = products.map(p => `
+    <div class="card">
+      <img src="${p.img}">
+      <h3>${p.name}</h3>
+      <p class="price">${money(p.price)}</p>
+      <button class="yellow" onclick="addCart(${p.id})">Thêm vào giỏ</button>
+    </div>
+  `).join("");
+}
+
+function addCart(id){
+  const product = products.find(p => p.id === id);
+  const item = cart.find(i => i.id === id);
+
+  if(item){
+    item.qty++;
+  }else{
+    cart.push({...product, qty:1});
+  }
+
+  renderCart();
+}
+
+function removeCart(id){
+  cart = cart.filter(i => i.id !== id);
+  renderCart();
+}
+
+function renderCart(){
+  document.getElementById("cartList").innerHTML = cart.map(i => `
+    <div class="item">
+      <span>${i.name} x ${i.qty}</span>
+      <button class="red" onclick="removeCart(${i.id})">X</button>
+    </div>
+  `).join("");
+
+  const total = cart.reduce((sum,i)=>sum+i.price*i.qty,0);
+  document.getElementById("total").innerText = money(total);
+}
+
+function order(){
+  const name = document.getElementById("name").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const address = document.getElementById("address").value.trim();
+
+  if(!name || !phone || !address){
+    alert("Vui lòng nhập đầy đủ thông tin.");
+    return;
+  }
+
+  if(cart.length === 0){
+    alert("Giỏ hàng đang trống.");
+    return;
+  }
+
+  const orders = JSON.parse(localStorage.getItem("orders") || "[]");
+
+  const newOrder = {
+    id: Date.now(),
+    name,
+    phone,
+    address,
+    cart,
+    total: cart.reduce((sum,i)=>sum+i.price*i.qty,0),
+    status: "Đơn mới",
+    time: new Date().toLocaleString("vi-VN")
+  };
+
+  orders.unshift(newOrder);
+  localStorage.setItem("orders", JSON.stringify(orders));
+
+  alert("Đặt hàng thành công! Đơn đã chuyển sang trang quản lý.");
+
+  cart = [];
+  renderCart();
+
+  document.getElementById("name").value = "";
+  document.getElementById("phone").value = "";
+  document.getElementById("address").value = "";
+}
+
+renderProducts();
+renderCart();
+</script>
+
+</body>
+</html>
