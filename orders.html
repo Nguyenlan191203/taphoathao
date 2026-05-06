@@ -6,12 +6,12 @@
 <title>Thông tin đơn hàng</title>
 <style>
 body{margin:0;font-family:Arial;background:#f4f8f2}
-header{background:#00843d;color:white;padding:15px 40px;display:flex;justify-content:space-between;align-items:center}
+header{background:#00843d;color:white;padding:15px 40px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 button{border:0;padding:10px 16px;border-radius:20px;font-weight:bold;cursor:pointer;margin:4px}
 .green{background:#00843d;color:white}.yellow{background:#ffd43b}.red{background:#dc2626;color:white}
 .container{margin:30px 40px}
 .login,.order{background:white;border-radius:18px;padding:20px;margin-bottom:15px;box-shadow:0 5px 20px #0001}
-input{padding:12px;border:1px solid #ddd;border-radius:10px;width:250px}
+input{padding:12px;border:1px solid #ddd;border-radius:10px;width:250px;max-width:100%;margin:5px}
 .badge{display:inline-block;background:#ffd43b;padding:6px 12px;border-radius:20px;font-weight:bold}
 .item{background:#f7f7f7;margin:5px 0;padding:8px;border-radius:10px}
 .total{color:#dc2626;font-size:20px;font-weight:bold}
@@ -20,8 +20,11 @@ input{padding:12px;border:1px solid #ddd;border-radius:10px;width:250px}
 <body>
 
 <header>
-  <h2>Trang thông tin đặt hàng</h2>
-  <button class="yellow" onclick="location.href='index.html'">Về trang bán hàng</button>
+  <h2>Trang admin đơn hàng</h2>
+  <div>
+    <button class="yellow" onclick="location.href='index.html'">Về trang bán hàng</button>
+    <button class="yellow" onclick="location.href='my-orders.html'">Đơn hàng của tôi</button>
+  </div>
 </header>
 
 <div class="container">
@@ -60,13 +63,10 @@ const db = getDatabase(app);
 
 const ADMIN_PASSWORD = "123456";
 
-function money(n){
-  return Number(n || 0).toLocaleString("vi-VN") + "đ";
-}
+function money(n){ return Number(n || 0).toLocaleString("vi-VN") + "đ"; }
 
 function login(){
   const pass = document.getElementById("password").value;
-
   if(pass === ADMIN_PASSWORD){
     sessionStorage.setItem("adminLogin","true");
     showAdmin();
@@ -104,11 +104,11 @@ function renderOrders(){
       <div class="order">
         <h3>Đơn #${id}</h3>
         <span class="badge">${o.status || "Đơn mới"}</span>
-
         <p><b>Khách hàng:</b> ${o.name || ""}</p>
         <p><b>Số điện thoại:</b> ${o.phone || ""}</p>
         <p><b>Địa chỉ:</b> ${o.address || ""}</p>
-        <p><b>Thời gian:</b> ${o.time || ""}</p>
+        <p><b>Giờ khách muốn giao:</b> ${o.deliveryTime || "Không chọn"}</p>
+        <p><b>Thời gian đặt:</b> ${o.time || ""}</p>
 
         <h4>Sản phẩm:</h4>
         ${(o.cart || []).map(i => `
@@ -120,7 +120,9 @@ function renderOrders(){
         <p class="total">Tổng tiền: ${money(o.total)}</p>
 
         <button class="green" onclick="updateStatus('${id}', 'Đang xử lý')">Đang xử lý</button>
+        <button class="green" onclick="updateStatus('${id}', 'Đang giao')">Đang giao</button>
         <button class="green" onclick="updateStatus('${id}', 'Đã giao')">Đã giao</button>
+        <button class="red" onclick="updateStatus('${id}', 'Đã hủy')">Đã hủy</button>
         <button class="red" onclick="deleteOrder('${id}')">Xóa đơn</button>
       </div>
     `).join("");
@@ -128,9 +130,7 @@ function renderOrders(){
 }
 
 function updateStatus(id, status){
-  update(ref(db, "orders/" + id), {
-    status: status
-  });
+  update(ref(db, "orders/" + id), { status });
 }
 
 function deleteOrder(id){
@@ -145,9 +145,7 @@ function clearOrders(){
   }
 }
 
-if(sessionStorage.getItem("adminLogin") === "true"){
-  showAdmin();
-}
+if(sessionStorage.getItem("adminLogin") === "true"){ showAdmin(); }
 
 window.login = login;
 window.logout = logout;

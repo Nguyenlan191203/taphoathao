@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đơn hàng của tôi</title>
+<style>
+body{margin:0;font-family:Arial;background:#f4f8f2}
+header{background:#00843d;color:white;padding:15px 40px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+button{border:0;padding:10px 16px;border-radius:20px;font-weight:bold;cursor:pointer;margin:4px}
+.yellow{background:#ffd43b}.green{background:#00843d;color:white}.red{background:#dc2626;color:white}
+.container{margin:30px 40px}
+.box,.order{background:white;border-radius:18px;padding:20px;margin-bottom:15px;box-shadow:0 5px 20px #0001}
+.badge{display:inline-block;background:#ffd43b;padding:8px 14px;border-radius:20px;font-weight:bold}
+.item{background:#f7f7f7;margin:5px 0;padding:8px;border-radius:10px}
+.total{color:#dc2626;font-size:20px;font-weight:bold}
+.note{color:#555}
+</style>
+</head>
+<body>
+
+<header>
+  <h2>Đơn hàng của tôi</h2>
+  <button class="yellow" onclick="location.href='index.html'">Về trang bán hàng</button>
+</header>
+
+<div class="container">
+  <div class="box">
+    <h2>Trạng thái đơn hàng</h2>
+    <p class="note">Trang này tự hiện các đơn đã đặt trên thiết bị này. Khách không cần nhập mã đơn.</p>
+    <button class="red" onclick="clearMyOrders()">Xóa lịch sử đơn trên máy này</button>
+  </div>
+
+  <div id="result"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAxV1X_B1tizqiwPtyIB-djVuluMspJIdc",
+  authDomain: "taphoa-9b46c.firebaseapp.com",
+  databaseURL: "https://taphoa-9b46c-default-rtdb.firebaseio.com",
+  projectId: "taphoa-9b46c",
+  storageBucket: "taphoa-9b46c.firebasestorage.app",
+  messagingSenderId: "877038942781",
+  appId: "1:877038942781:web:0ff77efaa5b10c2b1b4854",
+  measurementId: "G-H0HDHPYWX7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+function money(n){ return Number(n || 0).toLocaleString("vi-VN") + "đ"; }
+
+function getMyOrderIds(){
+  return JSON.parse(localStorage.getItem("myOrderIds") || "[]");
+}
+
+function renderEmpty(){
+  document.getElementById("result").innerHTML = `
+    <div class="box">
+      <p>Bạn chưa có đơn hàng nào trên thiết bị này.</p>
+      <button class="green" onclick="location.href='index.html'">Mua hàng ngay</button>
+    </div>
+  `;
+}
+
+function renderOrders(){
+  const ids = getMyOrderIds();
+  const result = document.getElementById("result");
+
+  if(ids.length === 0){
+    renderEmpty();
+    return;
+  }
+
+  result.innerHTML = "<p>Đang tải đơn hàng...</p>";
+  let ordersData = {};
+
+  ids.forEach(id => {
+    onValue(ref(db, "orders/" + id), snapshot => {
+      const order = snapshot.val();
+      if(order){
+        ordersData[id] = order;
+      }else{
+        delete ordersData[id];
+      }
+
+      const html = ids
+        .filter(orderId => ordersData[orderId])
+        .map(orderId => renderOrderCard(orderId, ordersData[orderId]))
+        .join("");
+
+      result.innerHTML = html || `
+        <div class="box">
+          <p>Không tìm thấy đơn hàng. Có thể đơn đã bị admin xóa.</p>
+        </div>
+      `;
+    });
+  });
+}
+
+function renderOrderCard(id, o){
+  return `
+    <div class="order">
+      <h2>Đơn #${id}</h2>
+      <p>Trạng thái: <span class="badge">${o.status || "Đơn mới"}</span></p>
+      <p><b>Khách hàng:</b> ${o.name || ""}</p>
+      <p><b>Số điện thoại:</b> ${o.phone || ""}</p>
+      <p><b>Địa chỉ:</b> ${o.address || ""}</p>
+      <p><b>Giờ muốn giao:</b> ${o.deliveryTime || "Không chọn"}</p>
+      <p><b>Thời gian đặt:</b> ${o.time || ""}</p>
+
+      <h4>Sản phẩm:</h4>
+      ${(o.cart || []).map(i => `
+        <div class="item">
+          ${i.name} x ${i.qty} - ${money(i.price * i.qty)}
+        </div>
+      `).join("")}
+
+      <p class="total">Tổng tiền: ${money(o.total)}</p>
+    </div>
+  `;
+}
+
+function clearMyOrders(){
+  if(confirm("Chỉ xóa lịch sử đơn trên máy này, không xóa đơn trên admin. Bạn chắc chắn?")){
+    localStorage.removeItem("myOrderIds");
+    renderEmpty();
+  }
+}
+
+window.clearMyOrders = clearMyOrders;
+renderOrders();
+</script>
+
+</body>
+</html>
