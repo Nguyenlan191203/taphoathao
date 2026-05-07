@@ -30,7 +30,51 @@ button{border:0;padding:10px 16px;border-radius:20px;font-weight:bold;cursor:poi
 .cartCount{background:#dc2626;color:white;border-radius:50%;padding:3px 8px;margin-left:5px}
 .loading{background:white;border-radius:18px;padding:25px;text-align:center;grid-column:1/-1}
 @media(max-width:800px){.products{grid-template-columns:repeat(2,1fr);gap:22px}.hero,.layout{margin:15px}.logo{font-size:18px}
-.card img{height:210px;width:100%;}}
+.card img{height:210px;width:100%;border-radius:10px;}
+header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px;
+  }
+
+  header > div:last-child{
+    margin-left:auto;
+    display:flex;
+    gap:6px;
+    align-items:center;
+  }
+
+  header .white{
+    font-size:0;
+    width:35px;
+    height:35px;
+    padding:0;
+    border-radius:50%;
+  }
+
+  header .white::before{
+    content:"🛒";
+    font-size:20px;
+  }
+
+  header .cartCount{
+    font-size:11px;
+    position:absolute;
+    margin-left:-8px;
+    margin-top:-8px;
+  }
+
+  header .yellow{
+    font-size:12px;
+    padding:8px 10px;
+    border-radius:18px;
+    white-space:nowrap;
+  }
+
+  .logo{
+    font-size:20px !important;
+  }}
 .searchBox{
   margin:20px 0;
   display:flex;
