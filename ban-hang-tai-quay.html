@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bán hàng tại quầy</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+body{margin:0;font-family:Arial;background:#f4f8f2}
+header{background:#00843d;color:white;padding:15px 30px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+button{border:0;padding:12px 18px;border-radius:18px;font-weight:bold;cursor:pointer;font-size:16px}
+.green{background:#00843d;color:white}.yellow{background:#ffd43b;color:#111}.red{background:#dc2626;color:white}.gray{background:#e5e7eb;color:#111}.white{background:white;color:#00843d}
+.container{display:grid;grid-template-columns:1fr 420px;gap:20px;margin:20px 30px}
+.searchBox,.scannerBox{background:white;padding:15px;border-radius:18px;box-shadow:0 5px 20px #0001;margin-bottom:15px}
+.searchBox input{width:100%;padding:16px;border:2px solid #00843d;border-radius:14px;font-size:20px;box-sizing:border-box}
+.products{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.card{background:white;border-radius:18px;padding:12px;text-align:center;box-shadow:0 5px 20px #0001}
+.card img{width:100%;height:130px;object-fit:cover;border-radius:12px;background:#eee}
+.card h3{font-size:16px;margin:8px 0 4px}
+.price{color:#dc2626;font-size:18px;font-weight:bold;margin:4px 0}
+.barcodeText{font-size:13px;color:#555;margin:4px 0}
+.bill{background:white;border-radius:18px;padding:18px;box-shadow:0 5px 20px #0001;position:sticky;top:90px;max-height:calc(100vh - 110px);overflow:auto}
+.item{border-bottom:1px solid #eee;padding:10px 0}
+.itemTop{display:flex;justify-content:space-between;gap:10px}
+.itemName{font-weight:bold;font-size:17px}
+.qtyRow{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.qty{font-size:22px;font-weight:bold;min-width:35px;text-align:center}
+.totalBox{background:#ecfdf5;border:2px solid #00843d;border-radius:18px;padding:15px;margin:15px 0}
+.totalMoney{font-size:36px;color:#dc2626;font-weight:bold}
+.cashInput{width:100%;font-size:28px;padding:14px;border:2px solid #00843d;border-radius:14px;box-sizing:border-box;margin:8px 0}
+.changeMoney{font-size:30px;color:#00843d;font-weight:bold}
+.empty{text-align:center;color:#666;padding:25px}
+.quickCash{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0}
+.bigBtn{width:100%;font-size:22px;padding:16px;border-radius:18px;margin-top:8px}
+#reader{width:100%;max-width:420px;margin:15px auto}
+.scanResult{font-size:16px;background:#ecfdf5;border:1px solid #bbf7d0;padding:10px;border-radius:12px;margin-top:10px}
+@media(max-width:900px){
+  .container{grid-template-columns:1fr;margin:12px}
+  .products{grid-template-columns:repeat(2,1fr);gap:10px}
+  .card img{height:120px}
+  .bill{position:static;max-height:none}
+  header{padding:12px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h2>🧾 Bán hàng tại quầy</h2>
+  <div>
+    <button class="yellow" onclick="location.href='index.html'">Trang bán online</button>
+    <button class="white" onclick="location.href='products-admin.html'">Quản lý sản phẩm</button>
+  </div>
+</header>
+
+<div class="container">
+  <main>
+    <div class="scannerBox">
+      <h2>📷 Quét mã vạch</h2>
+      <button class="green" onclick="startScanner()">Mở camera quét</button>
+      <button class="red" onclick="stopScanner()">Tắt camera</button>
+      <div id="reader"></div>
+      <div class="scanResult" id="scanResult">Chưa quét mã vạch.</div>
+    </div>
+
+    <div class="searchBox">
+      <input id="searchInput" placeholder="🔍 Tìm sản phẩm..." oninput="searchProducts()">
+    </div>
+    <h2>Chọn sản phẩm</h2>
+    <div class="products" id="products"><div class="empty">Đang tải sản phẩm...</div></div>
+  </main>
+
+  <aside class="bill">
+    <h2>🛒 Hóa đơn</h2>
+    <div id="billList"></div>
+
+    <div class="totalBox">
+      <b>Tổng tiền</b>
+      <div class="totalMoney" id="totalMoney">0đ</div>
+    </div>
+
+    <h3>Tiền khách đưa</h3>
+    <input class="cashInput" id="cashInput" type="number" placeholder="Nhập số tiền" oninput="calculateChange()">
+
+    <div class="quickCash">
+      <button class="gray" onclick="setCash(50000)">50k</button>
+      <button class="gray" onclick="setCash(100000)">100k</button>
+      <button class="gray" onclick="setCash(200000)">200k</button>
+      <button class="gray" onclick="setCash(500000)">500k</button>
+    </div>
+
+    <h3>Tiền thối lại</h3>
+    <div class="changeMoney" id="changeMoney">0đ</div>
+
+    <button class="green bigBtn" onclick="finishSale()">Đã thanh toán</button>
+    <button class="red bigBtn" onclick="clearBill()">Xóa hóa đơn</button>
+  </aside>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAxV1X_B1tizqiwPtyIB-djVuluMspJIdc",
+  authDomain: "taphoa-9b46c.firebaseapp.com",
+  databaseURL: "https://taphoa-9b46c-default-rtdb.firebaseio.com",
+  projectId: "taphoa-9b46c",
+  storageBucket: "taphoa-9b46c.firebasestorage.app",
+  messagingSenderId: "877038942781",
+  appId: "1:877038942781:web:0ff77efaa5b10c2b1b4854",
+  measurementId: "G-H0HDHPYWX7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let products = [];
+let filteredProducts = [];
+let bill = JSON.parse(localStorage.getItem("shopBill") || "[]");
+
+let html5QrCode = null;
+let isScanning = false;
+let lastScannedCode = "";
+let lastScannedTime = 0;
+
+function money(n){ return Number(n || 0).toLocaleString("vi-VN") + "đ"; }
+function saveBill(){ localStorage.setItem("shopBill", JSON.stringify(bill)); }
+
+function loadProducts(){
+  onValue(ref(db, "products"), snapshot => {
+    const data = snapshot.val();
+    if(!data){
+      document.getElementById("products").innerHTML = "<div class='empty'>Chưa có sản phẩm.</div>";
+      return;
+    }
+
+    products = Object.entries(data).map(([id,p]) => ({
+      id,
+      name: p.name || "Sản phẩm",
+      price: Number(p.price || 0),
+      img: p.img || "",
+      barcode: String(p.barcode || "").trim()
+    }));
+
+    filteredProducts = [...products];
+    renderProducts();
+  });
+}
+
+function renderProducts(){
+  const box = document.getElementById("products");
+  if(filteredProducts.length === 0){
+    box.innerHTML = "<div class='empty'>Không tìm thấy sản phẩm.</div>";
+    return;
+  }
+
+  box.innerHTML = filteredProducts.map(p => `
+    <div class="card">
+      <img src="${p.img}" onerror="this.src='https://via.placeholder.com/300x200?text=San+pham'">
+      <h3>${p.name}</h3>
+      <p class="price">${money(p.price)}</p>
+      <p class="barcodeText">Mã vạch: ${p.barcode || "Chưa có"}</p>
+      <button class="yellow" onclick="addToBill('${p.id}')">Chọn</button>
+    </div>
+  `).join("");
+}
+
+function searchProducts(){
+  const keyword = document.getElementById("searchInput").value.toLowerCase().trim();
+  filteredProducts = keyword ? products.filter(p =>
+    p.name.toLowerCase().includes(keyword) || String(p.barcode || "").includes(keyword)
+  ) : [...products];
+  renderProducts();
+}
+
+function addToBill(id){
+  const product = products.find(p => p.id === id);
+  if(!product) return;
+
+  const item = bill.find(i => i.id === id);
+  if(item){ item.qty++; } else { bill.push({...product, qty:1}); }
+
+  saveBill();
+  renderBill();
+}
+
+function findProductByBarcode(code){
+  const cleanCode = String(code || "").trim();
+  document.getElementById("scanResult").innerText = "Đã quét: " + cleanCode;
+
+  const product = products.find(p => String(p.barcode || "").trim() === cleanCode);
+
+  if(!product){
+    document.getElementById("scanResult").innerText = "Không tìm thấy sản phẩm có mã vạch: " + cleanCode;
+    alert("Không tìm thấy sản phẩm có mã vạch: " + cleanCode);
+    return;
+  }
+
+  addToBill(product.id);
+  document.getElementById("scanResult").innerText = "Đã thêm: " + product.name;
+}
+
+function startScanner(){
+  if(isScanning) return;
+
+  if(typeof Html5Qrcode === "undefined"){
+    alert("Chưa tải được thư viện quét mã. Hãy kiểm tra internet.");
+    return;
+  }
+
+  html5QrCode = new Html5Qrcode("reader");
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    {
+      fps: 10,
+      qrbox: { width: 280, height: 160 }
+    },
+    decodedText => {
+      const now = Date.now();
+
+      if(decodedText === lastScannedCode && now - lastScannedTime < 1500){
+        return;
+      }
+
+      lastScannedCode = decodedText;
+      lastScannedTime = now;
+
+      findProductByBarcode(decodedText);
+    }
+  ).then(() => {
+    isScanning = true;
+    document.getElementById("scanResult").innerText = "Đang quét mã vạch...";
+  }).catch(() => {
+    alert("Không mở được camera. Hãy cho phép quyền camera và chạy bằng Live Server hoặc HTTPS.");
+  });
+}
+
+function stopScanner(){
+  if(html5QrCode && isScanning){
+    html5QrCode.stop().then(() => {
+      isScanning = false;
+      document.getElementById("reader").innerHTML = "";
+      document.getElementById("scanResult").innerText = "Đã tắt camera.";
+    });
+  }
+}
+
+function increaseQty(id){
+  const item = bill.find(i => i.id === id);
+  if(item) item.qty++;
+  saveBill();
+  renderBill();
+}
+
+function decreaseQty(id){
+  const item = bill.find(i => i.id === id);
+  if(!item) return;
+  item.qty--;
+  if(item.qty <= 0){ removeItem(id); } else { saveBill(); renderBill(); }
+}
+
+function removeItem(id){
+  bill = bill.filter(i => i.id !== id);
+  saveBill();
+  renderBill();
+}
+
+function getTotal(){
+  return bill.reduce((sum,i)=>sum + Number(i.price || 0) * Number(i.qty || 0), 0);
+}
+
+function renderBill(){
+  const box = document.getElementById("billList");
+
+  if(bill.length === 0){
+    box.innerHTML = "<div class='empty'>Chưa chọn sản phẩm.</div>";
+  }else{
+    box.innerHTML = bill.map(i => `
+      <div class="item">
+        <div class="itemTop">
+          <div>
+            <div class="itemName">${i.name}</div>
+            <div>${money(i.price)} x ${i.qty}</div>
+          </div>
+          <b>${money(i.price * i.qty)}</b>
+        </div>
+        <div class="qtyRow">
+          <button class="yellow" onclick="decreaseQty('${i.id}')">-</button>
+          <span class="qty">${i.qty}</span>
+          <button class="yellow" onclick="increaseQty('${i.id}')">+</button>
+          <button class="red" onclick="removeItem('${i.id}')">Xóa</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  document.getElementById("totalMoney").innerText = money(getTotal());
+  calculateChange();
+}
+
+function setCash(amount){
+  document.getElementById("cashInput").value = amount;
+  calculateChange();
+}
+
+function calculateChange(){
+  const cash = Number(document.getElementById("cashInput").value || 0);
+  const total = getTotal();
+  const change = cash - total;
+
+  if(change < 0){
+    document.getElementById("changeMoney").innerText = "Còn thiếu " + money(Math.abs(change));
+    document.getElementById("changeMoney").style.color = "#dc2626";
+  }else{
+    document.getElementById("changeMoney").innerText = money(change);
+    document.getElementById("changeMoney").style.color = "#00843d";
+  }
+}
+
+function clearBill(){
+  if(confirm("Xóa hóa đơn hiện tại?")){
+    bill = [];
+    saveBill();
+    document.getElementById("cashInput").value = "";
+    renderBill();
+  }
+}
+
+function finishSale(){
+  if(bill.length === 0){ alert("Chưa có sản phẩm trong hóa đơn."); return; }
+
+  const cash = Number(document.getElementById("cashInput").value || 0);
+  const total = getTotal();
+
+  if(cash < total){ alert("Tiền khách đưa chưa đủ."); return; }
+
+  const sale = {
+    type: "Tại quầy",
+    cart: bill,
+    total,
+    cash,
+    change: cash - total,
+    status: "Đã thanh toán tại quầy",
+    time: new Date().toLocaleString("vi-VN")
+  };
+
+  push(ref(db, "shopSales"), sale);
+
+  alert("Thanh toán xong! Tiền thối lại: " + money(cash - total));
+
+  bill = [];
+  saveBill();
+  document.getElementById("cashInput").value = "";
+  renderBill();
+}
+
+window.searchProducts = searchProducts;
+window.addToBill = addToBill;
+window.increaseQty = increaseQty;
+window.decreaseQty = decreaseQty;
+window.removeItem = removeItem;
+window.setCash = setCash;
+window.calculateChange = calculateChange;
+window.clearBill = clearBill;
+window.finishSale = finishSale;
+window.startScanner = startScanner;
+window.stopScanner = stopScanner;
+
+loadProducts();
+renderBill();
+</script>
+</body>
+</html>

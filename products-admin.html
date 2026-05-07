@@ -45,6 +45,7 @@ input{padding:12px;border:1px solid #ddd;border-radius:10px;width:100%;box-sizin
       <h2 id="productFormTitle">Thêm sản phẩm mới</h2>
       <input id="productName" placeholder="Tên sản phẩm">
       <input id="productPrice" type="number" placeholder="Giá sản phẩm">
+      <input id="productBarcode" placeholder="Mã vạch sản phẩm">
       <input id="productImg" placeholder="Link ảnh sản phẩm nếu không muốn tải ảnh">
       <input id="productFile" type="file" accept="image/*">
       <img id="previewImg" class="preview">
@@ -198,6 +199,7 @@ function renderProducts(){
         <img src="${p.img || ""}" onerror="this.src='https://via.placeholder.com/500x300?text=San+pham'">
         <h3>${p.name || ""}</h3>
         <p class="price">${money(p.price || 0)}</p>
+        <p><b>Mã vạch:</b> ${p.barcode || "Chưa có"}</p>
         <button class="yellow" onclick="editProduct('${id}')">Sửa</button>
         <button class="red" onclick="deleteProduct('${id}')">Xóa</button>
       </div>
@@ -209,6 +211,7 @@ function saveProduct(){
   const name = document.getElementById("productName").value.trim();
   const price = Number(document.getElementById("productPrice").value);
   const linkImg = document.getElementById("productImg").value.trim();
+  const barcode = document.getElementById("productBarcode").value.trim();
   const finalImg = selectedImageBase64 || linkImg;
 
   if(!name || !price || !finalImg){
@@ -216,7 +219,7 @@ function saveProduct(){
     return;
   }
 
-  const product = { name, price, img: finalImg };
+  const product = { name, price, img: finalImg, barcode };
 
   if(editingProductId){
     set(ref(db, "products/" + editingProductId), product);
@@ -240,6 +243,7 @@ function editProduct(id){
     document.getElementById("productFormTitle").innerText = "Sửa sản phẩm";
     document.getElementById("productName").value = p.name || "";
     document.getElementById("productPrice").value = p.price || "";
+    document.getElementById("productBarcode").value = p.barcode || "";
     document.getElementById("productImg").value = "";
 
     const preview = document.getElementById("previewImg");
@@ -266,6 +270,7 @@ function resetProductForm(){
   document.getElementById("productFormTitle").innerText = "Thêm sản phẩm mới";
   document.getElementById("productName").value = "";
   document.getElementById("productPrice").value = "";
+  document.getElementById("productBarcode").value = "";
   document.getElementById("productImg").value = "";
   document.getElementById("productFile").value = "";
 
