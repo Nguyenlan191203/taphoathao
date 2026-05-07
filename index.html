@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GO Mini Mart</title>
+<title>TẠP HÓA THẢO</title>
 <style>
 body{margin:0;font-family:Arial;background:#f4f8f2}
 header{background:#00843d;color:white;padding:15px 40px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
@@ -12,12 +12,20 @@ button{border:0;padding:10px 16px;border-radius:20px;font-weight:bold;cursor:poi
 .yellow{background:#ffd43b}.green{background:#00843d;color:white}.red{background:#dc2626;color:white}.white{background:white;color:#00843d}
 .hero{margin:25px 40px;padding:35px;border-radius:25px;background:linear-gradient(120deg,#00843d,#10b981);color:white}
 .layout{margin:25px 40px}
-.products{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
-.card{background:white;border-radius:18px;padding:18px; min-height:380px;box-shadow:0 5px 20px #0001;  display:flex;
+.products{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+.card{background:white;border-radius:18px;padding:15px; min-height:300px;box-shadow:0 5px 20px #0001;  display:flex;
   flex-direction:column;
   align-items:center;
-  text-align:center;}
-.card img{width:70%;height:330px;object-fit:cover;border-radius:14px;background:#eee}
+  text-align:center; gap:4px;}
+  .card h3{
+  margin:10px 0 5px;
+  font-size:20px;
+}
+
+.card p{
+  margin:4px 0;
+}
+.card img{width:90%;height:300px;object-fit:cover;border-radius:14px;background:#eee}
 .price{color:#dc2626;font-weight:bold}
 .cartCount{background:#dc2626;color:white;border-radius:50%;padding:3px 8px;margin-left:5px}
 .loading{background:white;border-radius:18px;padding:25px;text-align:center;grid-column:1/-1}
