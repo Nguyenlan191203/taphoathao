@@ -41,6 +41,12 @@ button{border:0;padding:12px 18px;border-radius:18px;font-weight:bold;cursor:poi
   .bill{position:static;max-height:none}
   header{padding:12px}
 }
+
+.mobileHint{display:none;background:white;border-radius:18px;padding:18px;text-align:center;color:#555;box-shadow:0 5px 20px #0001;margin-bottom:12px}
+@media(max-width:900px){
+  .mobileHint{display:block}
+}
+
 </style>
 </head>
 <body>
@@ -66,6 +72,7 @@ button{border:0;padding:12px 18px;border-radius:18px;font-weight:bold;cursor:poi
       <input id="searchInput" placeholder="🔍 Tìm sản phẩm..." oninput="searchProducts()">
     </div>
     <h2>Chọn sản phẩm</h2>
+    <div class="mobileHint" id="mobileHint">Trên điện thoại, hãy gõ tên sản phẩm để hiện sản phẩm cần bán.</div>
     <div class="products" id="products"><div class="empty">Đang tải sản phẩm...</div></div>
   </main>
 
@@ -147,8 +154,19 @@ function loadProducts(){
   });
 }
 
+function isMobile(){
+  return window.innerWidth <= 900;
+}
+
 function renderProducts(){
   const box = document.getElementById("products");
+  const keyword = document.getElementById("searchInput").value.toLowerCase().trim();
+
+  if(isMobile() && keyword === ""){
+    box.innerHTML = "";
+    return;
+  }
+
   if(filteredProducts.length === 0){
     box.innerHTML = "<div class='empty'>Không tìm thấy sản phẩm.</div>";
     return;
@@ -367,6 +385,7 @@ window.finishSale = finishSale;
 window.startScanner = startScanner;
 window.stopScanner = stopScanner;
 
+window.addEventListener('resize', renderProducts);
 loadProducts();
 renderBill();
 </script>

@@ -75,7 +75,7 @@ display:none
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-import { getDatabase, ref, onValue, update, remove, push, set } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
+import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAxV1X_B1tizqiwPtyIB-djVuluMspJIdc",
@@ -166,7 +166,6 @@ function logout(){
 function showAdmin(){
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("adminBox").style.display = "block";
-  setupImageUpload();
   renderOrders();
 }
 
