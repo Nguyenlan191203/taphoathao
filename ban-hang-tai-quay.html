@@ -118,6 +118,7 @@ const firebaseConfig = {
   measurementId: "G-H0HDHPYWX7"
 };
 
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
@@ -372,6 +373,51 @@ function finishSale(){
   document.getElementById("cashInput").value = "";
   renderBill();
 }
+
+let barcodeBuffer = "";
+let barcodeTimer = null;
+
+document.addEventListener("keydown", function(e){
+  // Nếu đang gõ trong ô tìm sản phẩm hoặc ô tiền khách đưa thì không bắt mã vạch
+  const active = document.activeElement;
+  const tag = active ? active.tagName.toLowerCase() : "";
+
+  if(tag === "input" || tag === "textarea"){
+    return;
+  }
+
+  // Máy quét thường tự bấm Enter sau khi quét xong
+  if(e.key === "Enter"){
+    const code = barcodeBuffer.trim();
+
+    barcodeBuffer = "";
+
+    if(barcodeTimer){
+      clearTimeout(barcodeTimer);
+    }
+
+    if(code){
+      findProductByBarcode(code);
+    }
+
+    e.preventDefault();
+    return;
+  }
+
+  // Chỉ lấy ký tự thường từ máy quét
+  if(e.key.length === 1){
+    barcodeBuffer += e.key;
+
+    if(barcodeTimer){
+      clearTimeout(barcodeTimer);
+    }
+
+    // Nếu quá 300ms không có ký tự mới thì xóa bộ nhớ mã
+    barcodeTimer = setTimeout(function(){
+      barcodeBuffer = "";
+    }, 300);
+  }
+});
 
 window.searchProducts = searchProducts;
 window.addToBill = addToBill;
